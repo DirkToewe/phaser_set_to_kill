@@ -47,9 +47,9 @@
         input      = game.input.keyboard.createCursorKeys();
         input.fire = game.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
 
-        game.time.events.loop(Phaser.Timer.SECOND,     addFighters,      this);
-        game.time.events.loop(Phaser.Timer.SECOND/100, cannon,           this);
-        game.time.events.loop(Phaser.Timer.SECOND/ 10, fighterAnimation, this);
+        game.time.events.loop(Phaser.Timer.SECOND,    addFighters,      this);
+        game.time.events.loop(Phaser.Timer.SECOND/10, cannon,           this);
+        game.time.events.loop(Phaser.Timer.SECOND/10, fighterAnimation, this);
       }
 
       function cannon()
