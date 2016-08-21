@@ -33,7 +33,7 @@
         world.height = 1.5*256;
 
         background = game.add.tileSprite(0, 0, world.width, world.height, 'background-desert');
-        background.autoScroll(0,8);
+        background.autoScroll(0,32);
 
         fighter = game.add.sprite(128-8, 256+64, 'fighter');
         game.physics.arcade.enable(fighter);
@@ -59,16 +59,15 @@
             enemy.exists = false;
           }
         }
-        createEnemies(1024,'small');
-        createEnemies( 512,'medium');
-        createEnemies( 256,'big');
+        createEnemies( 256,'small');
+        createEnemies( 128,'medium');
+        createEnemies(  64,'big');
 
         explosions = game.add.group();
-        for( var i = 0; i < 2048; i++ )
+        for( var i = 0; i < 512; i++ )
         {
           var explosion = game.add.sprite( 0, 0, 'explosion' );
           explosions.add(explosion);
-          explosion.animations.add('explode', [0,1,2,3,4], 15);
           explosion.checkWorldBounds = true;
           explosion.outOfBoundsKill = true;
           explosion.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
@@ -105,6 +104,7 @@
         );
         enter.onDown.add(toggleFullScreen);
 
+        game.time.events.loop(Phaser.Timer.SECOND/10,  updateExplosions, this);
         game.time.events.loop(Phaser.Timer.SECOND/200, addEnemy,         this);
         game.time.events.loop(Phaser.Timer.SECOND/10,  fighterAnimation, this);
       }
@@ -140,9 +140,21 @@
           enemy.kill();
           var explosion = explosions.getFirstExists(false);
           explosion.reset(enemy.x, enemy.y);
-          explosion.animations.play('explode');
-          game.time.events.add(Phaser.Timer.SECOND/15*5, explosion.kill, explosion);
+          explosion.frame = 0;
         }
+      }
+
+      function updateExplosions()
+      {
+        explosions.forEachAlive(
+          function(explosion)
+          {
+            if( 4 === explosion.frame )
+              explosion.kill();
+            else
+              explosion.frame += 1;
+          }
+        );
       }
 
       function fighterAnimation()
