@@ -17,7 +17,7 @@
       var game = new Phaser.Game(512, 1.5*512, Phaser.AUTO, '', { preload: preload, create: create, update: update });
       var score = 0;
       var scoreText, fpsText;
-      var background, fighter, cannon, enemies;
+      var background, fighter, cannon, enemies, explosions;
       var input;
 
       function create()
@@ -50,7 +50,7 @@
         {
           for( var i = 0; i < count; i++ )
           {
-            enemy = game.add.sprite( 0, 0, 'enemy-'+size );
+            var enemy = game.add.sprite( 0, 0, 'enemy-'+size );
             enemies[size].add(enemy);
             enemy.checkWorldBounds = true;
             enemy.outOfBoundsKill = true;
@@ -61,6 +61,18 @@
         createEnemies(1024,'small');
         createEnemies( 512,'medium');
         createEnemies( 256,'big');
+
+        explosions = game.add.group();
+        for( var i = 0; i < 2048; i++ )
+        {
+          var explosion = game.add.sprite( 0, 0, 'explosion' );
+          explosions.add(explosion);
+          explosion.animations.add('explode', [0,1,2,3,4], 8);
+          explosion.checkWorldBounds = true;
+          explosion.outOfBoundsKill = true;
+          explosion.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
+          explosion.exists = false;
+        }
         
         bullets = game.add.group();
         bullets.enableBody = true;
@@ -105,8 +117,7 @@
         scoreText.setText('Score: '+score);
         bullet.kill();
         enemy.kill();
-        explosion = game.add.sprite(enemy.x, enemy.y, 'explosion');
-        explosion.animations.add('explode', [0,1,2,3,4], 8);
+        explosion = explosions.getFirstExists(false);
         explosion.animations.play('explode');
         game.time.events.add(Phaser.Timer.SECOND/8*5, explosion.kill, explosion);
       }
