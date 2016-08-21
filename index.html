@@ -85,7 +85,7 @@
         input       = game.input.keyboard.createCursorKeys();
         input.fire  = game.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
         input.mouse = game.input.mousePointer;
-        input.touch = game.input.addPointer();
+        input.touch = game.input.pointer1;
 
         game.time.events.loop(Phaser.Timer.SECOND/200, addEnemy,         this);
         game.time.events.loop(Phaser.Timer.SECOND/10,  fighterAnimation, this);
