@@ -14,6 +14,7 @@
 
   <body>
     <script type="text/javascript">
+      'use strict';
       var game = new Phaser.Game(512, 1.5*512, Phaser.AUTO, '', { preload: preload, create: create, update: update });
       var score = 0;
       var scoreText, fpsText;
@@ -73,9 +74,6 @@
           explosion.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
           explosion.exists = false;
         }
-        
-        bullets = game.add.group();
-        bullets.enableBody = true;
 
         cannon = new Weapon.SingleBullet(game);
 
@@ -97,7 +95,7 @@
         }
 
         game.input.addPointer();
-        enter = game.input.keyboard.addKey(Phaser.KeyCode.ENTER);
+        var enter = game.input.keyboard.addKey(Phaser.KeyCode.ENTER);
         game.input.onDown.add(
           function(pointer)
           {
@@ -113,7 +111,7 @@
 
       function addEnemy()
       {
-        roll = game.rnd.integerInRange(0,99);
+        var roll = game.rnd.integerInRange(0,99);
         var enemy;
         if( roll < 20 ) {
           enemy = enemies.big.getFirstExists(false);
@@ -140,7 +138,7 @@
           score += 1;
           bullet.kill();
           enemy.kill();
-          explosion = explosions.getFirstExists(false);
+          var explosion = explosions.getFirstExists(false);
           explosion.reset(enemy.x, enemy.y);
           explosion.animations.play('explode');
           game.time.events.add(Phaser.Timer.SECOND/15*5, explosion.kill, explosion);
@@ -160,9 +158,8 @@
 
         function handlePointer(pointer,yOff)
         {
-          scale = 1.0/game.world.scale.x;
-          fighter.body.velocity.x = Math.min(+512,Math.max(-512, 32*(pointer.x*scale - fighter.x) ));
-          fighter.body.velocity.y = Math.min(+512,Math.max(-512, 32*(pointer.y*scale - fighter.y-yOff) ));
+          fighter.body.velocity.x = Math.min(+512,Math.max(-512, 32*(pointer.x/game.world.scale.x - fighter.x) ));
+          fighter.body.velocity.y = Math.min(+512,Math.max(-512, 32*(pointer.y/game.world.scale.y - fighter.y-yOff) ));
           cannon.fire(fighter);  
         }
              if( input.touch.isDown ) handlePointer(input.touch,64);
@@ -198,7 +195,7 @@
         game.load.spritesheet('fighter',     'assets/spritesheets/ship.png',         16, 24);
       }
 
-      Weapon = {};
+      var Weapon = {};
       Weapon.SingleBullet = function (game) {
         Phaser.Group.call(this, game, game.world, 'Single Bullet', false, true, Phaser.Physics.ARCADE);
         this.nextFire = 0;
