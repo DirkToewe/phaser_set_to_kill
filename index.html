@@ -16,12 +16,14 @@
     <script type="text/javascript">
       var game = new Phaser.Game(512, 1.5*512, Phaser.AUTO, '', { preload: preload, create: create, update: update });
       var score = 0;
-      var scoreText;
-      var background, fighter, bullets, enemies;
+      var scoreText, fpsText;
+      var background, fighter, cannon, enemies;
       var input;
 
       function create()
       {
+        game.time.advancedTiming = true;
+        game.time.desiredFps = 60;
         game.physics.startSystem(Phaser.Physics.ARCADE);
 
         var world = game.world;
@@ -30,64 +32,71 @@
         world.height = 1.5*256;
 
         background = game.add.tileSprite(0, 0, world.width, world.height, 'background-desert');
+        background.autoScroll(0,8);
 
         fighter = game.add.sprite(128-8, 256+64, 'fighter');
         game.physics.arcade.enable(fighter);
         fighter.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
         fighter.body.collideWorldBounds = true;
 
-        enemies = game.add.group();
-        enemies.enableBody = true;
-
+        enemies = {};
+        enemies.small  = game.add.group();
+        enemies.medium = game.add.group();
+        enemies.big    = game.add.group();
+        enemies.small .enableBody = true;
+        enemies.medium.enableBody = true;
+        enemies.big   .enableBody = true;
+        function createEnemies(count,size)
+        {
+          for( var i = 0; i < count; i++ )
+          {
+            enemy = game.add.sprite( 0, 0, 'enemy-'+size );
+            enemies[size].add(enemy);
+            enemy.checkWorldBounds = true;
+            enemy.outOfBoundsKill = true;
+            enemy.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
+            enemy.exists = false;
+          }
+        }
+        createEnemies(1024,'small');
+        createEnemies( 512,'medium');
+        createEnemies( 256,'big');
+        
         bullets = game.add.group();
         bullets.enableBody = true;
 
-        scoreText = game.add.text(8, 8, 'Score: 0', { fontSize: '24px', fill: '#FFF' });
+        cannon = new Weapon.SingleBullet(game);
+
+        scoreText = game.add.text(8,      8, 'Score: 0', { fontSize: '24px', fill: '#FFF' });
+          fpsText = game.add.text(128+32, 8, 'FPS: 0', { fontSize: '24px', fill: '#FFF' });
 
         input      = game.input.keyboard.createCursorKeys();
         input.fire = game.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
 
-        game.time.events.loop(Phaser.Timer.SECOND,    addFighters,      this);
-        game.time.events.loop(Phaser.Timer.SECOND/10, cannon,           this);
-        game.time.events.loop(Phaser.Timer.SECOND/10, fighterAnimation, this);
+        game.time.events.loop(Phaser.Timer.SECOND/200, addEnemy,         this);
+        game.time.events.loop(Phaser.Timer.SECOND/10,  fighterAnimation, this);
       }
 
-      function cannon()
-      {
-        // TODO move this somewhere else
-        if( input.fire.isDown )
-        {
-          bullet = game.add.sprite( fighter.x, fighter.y, 'laser-bolts' );
-          bullet.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
-          bullets.add(bullet);
-          bullet.body.velocity.y = -300;
-          bullet.outOfBoundsKill = true;
-          bullet.frame = 2;
-        }
-      }
-
-      function addFighters()
+      function addEnemy()
       {
         roll = game.rnd.integerInRange(0,99);
         var enemy;
         if( roll < 20 ) {
-          enemy = game.add.sprite( game.rnd.integerInRange(16,128-16), 0, 'enemy-big' );
-          enemies.add(enemy);
-          enemy.body.velocity.y = 20;
+          enemy = enemies.big.getFirstExists(false);
+          enemy.reset(game.rnd.integerInRange(16,256-16), 0);
+          enemy.body.velocity.y = 100;
         }
         else if( roll < 40 ) {
-          enemy = game.add.sprite( game.rnd.integerInRange(16,128-16), 0, 'enemy-medium' );
-          enemies.add(enemy);
-          enemy.body.velocity.y = 40;
+          enemy = enemies.medium.getFirstExists(false);
+          enemy.reset(game.rnd.integerInRange(16,256-16), 0);
+          enemy.body.velocity.y = 200;
         }
         else if( roll < 80 ) {
-          enemy = game.add.sprite( game.rnd.integerInRange(16,128-16), 0, 'enemy-small' );
-          enemies.add(enemy);
-          enemy.body.velocity.y = 80;
+          enemy = enemies.small.getFirstExists(false);
+          enemy.reset(game.rnd.integerInRange(16,256-16), 0);
+          enemy.body.velocity.y = 300;
         }
         else return;
-        enemy.outOfBoundsKill = true;
-        enemy.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
       }
 
       function enemyHit(bullet,enemy)
@@ -99,7 +108,7 @@
         explosion = game.add.sprite(enemy.x, enemy.y, 'explosion');
         explosion.animations.add('explode', [0,1,2,3,4], 8);
         explosion.animations.play('explode');
-        game.time.events.add(Phaser.Timer.SECOND/8*5, explosion.kill, explosion)
+        game.time.events.add(Phaser.Timer.SECOND/8*5, explosion.kill, explosion);
       }
 
       function fighterAnimation()
@@ -110,17 +119,21 @@
 
       function update()
       {
-        if     ( input.up  .isDown ) fighter.body.gravity.y =-128;
-        else if( input.down.isDown ) fighter.body.gravity.y =+128;
-        else                         fighter.body.gravity.y = 0;
+        fpsText.setText('FPS: '+game.time.fps);
 
-        if     ( input.left .isDown ) fighter.body.gravity.x =-128;
-        else if( input.right.isDown ) fighter.body.gravity.x =+128;
-        else                          fighter.body.gravity.x = 0;
+        if     ( input.up  .isDown ) fighter.body.velocity.y =-512;
+        else if( input.down.isDown ) fighter.body.velocity.y =+512;
+        else                         fighter.body.velocity.y = 0;
 
-        game.physics.arcade.overlap(bullets,enemies,enemyHit);
+        if     ( input.left .isDown ) fighter.body.velocity.x =-512;
+        else if( input.right.isDown ) fighter.body.velocity.x =+512;
+        else                          fighter.body.velocity.x = 0;
 
-        background.tilePosition.y += 2;
+        if     ( input.fire.isDown ) cannon.fire(fighter);
+
+        game.physics.arcade.overlap(cannon,enemies.small, enemyHit);
+        game.physics.arcade.overlap(cannon,enemies.medium,enemyHit);
+        game.physics.arcade.overlap(cannon,enemies.big,   enemyHit);
       }
 
       function preload()
@@ -136,6 +149,53 @@
         game.load.spritesheet('power-up',    'assets/spritesheets/power-up.png',     16, 16);
         game.load.spritesheet('fighter',     'assets/spritesheets/ship.png',         16, 24);
       }
+
+      Weapon = {};
+      Weapon.SingleBullet = function (game) {
+        Phaser.Group.call(this, game, game.world, 'Single Bullet', false, true, Phaser.Physics.ARCADE);
+        this.nextFire = 0;
+        this.bulletSpeed = 800;
+        this.fireRate = 10;
+        for( var i = 0; i < 256; i++ )
+          this.add( new Bullet(game,'laser-bolts'), true );
+        return this;
+      };
+      Weapon.SingleBullet.prototype = Object.create(Phaser.Group.prototype);
+      Weapon.SingleBullet.prototype.constructor = Weapon.SingleBullet;
+      Weapon.SingleBullet.prototype.fire = function (source) {
+        if (this.game.time.time < this.nextFire) { return; }
+        var x = source.x;
+        var y = source.y;
+        this.getFirstExists(false).fire(x, y, -95,   this.bulletSpeed);
+        this.getFirstExists(false).fire(x, y, -92.5, this.bulletSpeed);
+        this.getFirstExists(false).fire(x, y, -90,   this.bulletSpeed);
+        this.getFirstExists(false).fire(x, y, -87.5, this.bulletSpeed);
+        this.getFirstExists(false).fire(x, y, -85,   this.bulletSpeed);
+        this.nextFire = this.game.time.time + this.fireRate;
+      };
+
+
+
+      function Bullet(game, asset)
+      {
+        Phaser.Sprite.call(this, game, 0, 0, asset);
+        this.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
+//        this.anchor.set(0.5);
+        this.checkWorldBounds = true;
+        this.outOfBoundsKill = true;
+        this.exists = false;
+        this.tracking = false;
+//        this.frame = 2;
+      }
+      Bullet.prototype = Object.create(Phaser.Sprite.prototype);
+      Bullet.prototype.constructor = Bullet;
+      Bullet.prototype.fire = function (x, y, angle, speed)
+      {
+        this.reset(x,y);
+        this.game.physics.arcade.velocityFromAngle(angle, speed, this.body.velocity);
+        this.angle = angle;
+      };
+      Bullet.prototype.update = function () {};
     </script>
   </body>
 
