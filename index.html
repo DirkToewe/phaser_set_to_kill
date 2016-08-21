@@ -27,7 +27,7 @@
         game.physics.startSystem(Phaser.Physics.ARCADE);
 
         var world = game.world;
-        world.scale.setTo(2,2);
+        world.scale.set(2);
         world.width  =     256;
         world.height = 1.5*256;
 
@@ -67,7 +67,7 @@
         {
           var explosion = game.add.sprite( 0, 0, 'explosion' );
           explosions.add(explosion);
-          explosion.animations.add('explode', [0,1,2,3,4], 8);
+          explosion.animations.add('explode', [0,1,2,3,4], 15);
           explosion.checkWorldBounds = true;
           explosion.outOfBoundsKill = true;
           explosion.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
@@ -80,10 +80,12 @@
         cannon = new Weapon.SingleBullet(game);
 
         scoreText = game.add.text(8,      8, 'Score: 0', { fontSize: '24px', fill: '#FFF' });
-          fpsText = game.add.text(128+32, 8, 'FPS: 0', { fontSize: '24px', fill: '#FFF' });
+          fpsText = game.add.text(128+32, 8, 'FPS: 0',   { fontSize: '24px', fill: '#FFF' });
 
-        input      = game.input.keyboard.createCursorKeys();
-        input.fire = game.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
+        input       = game.input.keyboard.createCursorKeys();
+        input.fire  = game.input.keyboard.addKey(Phaser.KeyCode.SPACEBAR);
+        input.mouse = game.input.mousePointer;
+        input.touch = game.input.addPointer();
 
         game.time.events.loop(Phaser.Timer.SECOND/200, addEnemy,         this);
         game.time.events.loop(Phaser.Timer.SECOND/10,  fighterAnimation, this);
@@ -106,20 +108,23 @@
         else if( roll < 80 ) {
           enemy = enemies.small.getFirstExists(false);
           enemy.reset(game.rnd.integerInRange(16,256-16), 0);
-          enemy.body.velocity.y = 300;
+          enemy.body.velocity.y = 400;
         }
         else return;
       }
 
       function enemyHit(bullet,enemy)
       {
-        score += 1;
-        scoreText.setText('Score: '+score);
-        bullet.kill();
-        enemy.kill();
-        explosion = explosions.getFirstExists(false);
-        explosion.animations.play('explode');
-        game.time.events.add(Phaser.Timer.SECOND/8*5, explosion.kill, explosion);
+        if( bullet.alive )
+        {
+          score += 1;
+          bullet.kill();
+          enemy.kill();
+          explosion = explosions.getFirstExists(false);
+          explosion.reset(enemy.x, enemy.y);
+          explosion.animations.play('explode');
+          game.time.events.add(Phaser.Timer.SECOND/15*5, explosion.kill, explosion);
+        }
       }
 
       function fighterAnimation()
@@ -131,14 +136,26 @@
       function update()
       {
         fpsText.setText('FPS: '+game.time.fps);
+        scoreText.setText('Score: '+score);
 
-        if     ( input.up  .isDown ) fighter.body.velocity.y =-512;
-        else if( input.down.isDown ) fighter.body.velocity.y =+512;
-        else                         fighter.body.velocity.y = 0;
+        function handlePointer(pointer,yOff)
+        {
+          scale = 1.0/game.world.scale.x;
+          fighter.body.velocity.x = Math.min(+512,Math.max(-512, 32*(pointer.x*scale - fighter.x) ));
+          fighter.body.velocity.y = Math.min(+512,Math.max(-512, 32*(pointer.y*scale - fighter.y-yOff) ));
+          cannon.fire(fighter);  
+        }
+             if( input.touch.isDown ) handlePointer(input.touch,64);
+        else if( input.mouse.isDown ) handlePointer(input.mouse,0);
+        else {
+          if     ( input.up  .isDown ) fighter.body.velocity.y =-512;
+          else if( input.down.isDown ) fighter.body.velocity.y =+512;
+          else                         fighter.body.velocity.y = 0;
 
-        if     ( input.left .isDown ) fighter.body.velocity.x =-512;
-        else if( input.right.isDown ) fighter.body.velocity.x =+512;
-        else                          fighter.body.velocity.x = 0;
+          if     ( input.left .isDown ) fighter.body.velocity.x =-512;
+          else if( input.right.isDown ) fighter.body.velocity.x =+512;
+          else                          fighter.body.velocity.x = 0;
+        }
 
         if     ( input.fire.isDown ) cannon.fire(fighter);
 
