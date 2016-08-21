@@ -87,6 +87,25 @@
         input.mouse = game.input.mousePointer;
         input.touch = game.input.pointer1;
 
+        game.scale.fullScreenScaleMode = Phaser.ScaleManager.SHOW_ALL;
+        function toggleFullScreen()
+        {
+          if (game.scale.isFullScreen)
+            game.scale.stopFullScreen();
+          else
+            game.scale.startFullScreen(false);
+        }
+
+        enter = game.input.keyboard.addKey(Phaser.KeyCode.ENTER);
+        game.input.onDown.add(
+          function(source)
+          {
+            if( source === game.input.pointer3 )
+              toggleFullScreen();
+          }
+        );
+        enter.onDown.add(toggleFullScreen);
+
         game.time.events.loop(Phaser.Timer.SECOND/200, addEnemy,         this);
         game.time.events.loop(Phaser.Timer.SECOND/10,  fighterAnimation, this);
       }
