@@ -98,9 +98,10 @@
 
         enter = game.input.keyboard.addKey(Phaser.KeyCode.ENTER);
         game.input.onDown.add(
-          function(source)
+          function(pointer)
           {
-            if( source === game.input.pointer3 )
+            scoreText.setText('Pointer-ID: '+pointer.id);
+            if( pointer.id === 3 )
               toggleFullScreen();
           }
         );
@@ -154,8 +155,8 @@
 
       function update()
       {
-        fpsText.setText('FPS: '+game.time.fps);
-        scoreText.setText('Score: '+score);
+//        fpsText.setText('FPS: '+game.time.fps);
+//        scoreText.setText('Score: '+score);
 
         function handlePointer(pointer,yOff)
         {
