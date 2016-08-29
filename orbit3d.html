@@ -1,0 +1,131 @@
+<!doctype html> 
+<html lang="en"> 
+
+  <head> 
+    <meta charset="UTF-8" />
+    <title>Phaser Set to Kill</title>
+    <script src="//cdn.jsdelivr.net/phaser/2.6.1/phaser.js"></script>
+    <style type="text/css">
+      body {
+        margin: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <script type="text/javascript">
+      'use strict';
+      var game = new Phaser.Game(
+        512, 1.5*512, Phaser.AUTO, '',
+        { preload: preload, create: create, update: update },
+        false, false
+      );
+      var
+        satelites = [],
+        group,
+        rot,
+        orbit; // <- rotation matrix
+
+      function create()
+      {
+        var world = game.world;
+        world.scale.set(2);
+        world.width  =     256;
+        world.height = 1.5*256;
+
+        var background = game.add.tileSprite(0, 0, world.width, world.height, 'background-desert');
+
+        group = game.add.group();
+
+        orbit = game.add.sprite(96, 128, 'fighter');
+        orbit.scale.set(4);
+        orbit.zed = 0; // <- do NOT use sprite.z as it is changed by the group constantly
+        group.add(orbit);
+
+        var
+          nSat = 3,
+          x = orbit.x + 96,
+          y = orbit.y - 64,
+          z = orbit.z;
+        rot = rotMat( [1,1,0], 360.0/nSat );
+        for( var i = 0; i < nSat; i++ )
+        {
+          var satelite = game.add.sprite(x, y, 'fighter');
+          satelite.zed = z; // <- do NOT use sprite.z as it is changed by the group constantly
+          group.add(satelite);
+          satelites.push(satelite);
+          rotateSat(satelite);
+          x = satelite.x;
+          y = satelite.y;
+          z = satelite.zed;
+        }
+        rot = rotMat( [1,1,0], 5 );
+
+        game.time.events.loop(Phaser.Timer.SECOND/30,  rotate, this);
+      }
+
+      function rotate()
+      {
+        for( var i = 0; i < satelites.length; i++ )
+          rotateSat(satelites[i]);
+        group.sort('zed');
+      }
+ 
+      function rotateSat( satelite )
+      { 
+        // position relative to the orbit
+        var
+          x = satelite.x   - orbit.x,
+          y = satelite.y   - orbit.y,
+          z = satelite.zed - orbit.zed;
+        // rotation by multipling the relative position with the rotation
+        // https://en.wikipedia.org/wiki/Matrix_multiplication#Square_matrix_and_column_vector
+        satelite.x   = rot[0][0]*x + rot[0][1]*y + rot[0][2]*z;
+        satelite.y   = rot[1][0]*x + rot[1][1]*y + rot[1][2]*z;
+        satelite.zed = rot[2][0]*x + rot[2][1]*y + rot[2][2]*z;
+        // transform back from orbit into global coordinates
+        satelite.x += orbit.x;
+        satelite.y += orbit.y;
+        satelite.zed += orbit.zed;
+      }
+
+      function rotMat(
+        axis, // <- x,y,z direction of the axis that is rotated around
+        angle // <- the angle by which the matrix rotates in degrees
+      )
+      {
+        var
+          rotX = axis[0],
+          rotY = axis[1],
+          rotZ = axis[2];
+        // normalize the rotation axis
+        var length = Math.sqrt(
+          rotX*rotX +
+          rotY*rotY +
+          rotZ*rotZ
+        );
+        rotX /= length;
+        rotY /= length;
+        rotZ /= length;
+        var
+          c = Math.cos( angle*Math.PI/180.0 ),
+          s = Math.sin( angle*Math.PI/180.0 );
+        // https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+        return [
+          [rotX*rotX*(1-c) + c     , rotX*rotY*(1-c) - rotZ*s, rotX*rotZ*(1-c) + rotY*s ],
+          [rotY*rotX*(1-c) + rotZ*s, rotY*rotY*(1-c) + c     , rotY*rotZ*(1-c) - rotX*s ],
+          [rotZ*rotX*(1-c) - rotY*s, rotZ*rotY*(1-c) + rotX*s, rotZ*rotZ*(1-c) + c      ]
+        ];
+      }
+
+      function update() {}
+
+      function preload()
+      {
+        game.load.image('background-desert', 'assets/backgrounds/desert-background.png', 256, 272);
+        game.load.spritesheet('fighter',     'assets/spritesheets/ship.png',             16, 24);
+      }
+    </script>
+  </body>
+
+</html>
