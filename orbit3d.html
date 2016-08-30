@@ -24,6 +24,7 @@
         satelites = [],
         group,
         rot,
+        camDist = 500, // <- the distance of the camer from the z=0 plane
         orbit; // <- rotation matrix
 
       function create()
@@ -42,8 +43,9 @@
         orbit.zed = 0; // <- do NOT use sprite.z as it is changed by the group constantly
         group.add(orbit);
 
+        // create nSat satelites in a circle around `orbit`.
         var
-          nSat = 3,
+          nSat = 16,
           x = orbit.x + 96,
           y = orbit.y - 64,
           z = orbit.z;
@@ -55,22 +57,27 @@
           group.add(satelite);
           satelites.push(satelite);
           rotateSat(satelite);
+          // memoize the last satelite's postion to begin the rotation of the next one from
           x = satelite.x;
           y = satelite.y;
           z = satelite.zed;
         }
-        rot = rotMat( [1,1,0], 5 );
+        rot = rotMat( [1,0.75,0], 5 );
 
         game.time.events.loop(Phaser.Timer.SECOND/30,  rotate, this);
       }
 
+      /** Rotates all satelites a single time with the rotation matrix rot.
+       */
       function rotate()
       {
         for( var i = 0; i < satelites.length; i++ )
           rotateSat(satelites[i]);
-        group.sort('zed');
+        group.sort('zed',Phaser.Group.SORT_DESCENDING);
       }
  
+      /** Rotates a sprite a single time with the roation matrix rot.
+       */
       function rotateSat( satelite )
       { 
         // position relative to the orbit
@@ -87,8 +94,11 @@
         satelite.x += orbit.x;
         satelite.y += orbit.y;
         satelite.zed += orbit.zed;
+        satelite.scale.set( camDist / (camDist+satelite.zed) );
       }
 
+      /** Returns a rotation matrix that roates around the `axis` by `angle` degrees.
+       */
       function rotMat(
         axis, // <- x,y,z direction of the axis that is rotated around
         angle // <- the angle by which the matrix rotates in degrees
